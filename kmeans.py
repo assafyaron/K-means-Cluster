@@ -57,21 +57,14 @@ def compute_centroid_from_cluster(cluster, k):
     return new_centroid
 
 
-def update_centroid_and_convergence(clusters, centroids, convergence, k):
+def update_centroid_and_convergence(clusters, centroids, k):
+    convergence = True
     for i in range(k):
         new_centroid = compute_centroid_from_cluster(clusters[i], k)
-        if centroids[i].distance(new_centroid) < 0.001:
-            convergence[i] = True
-        else:
-            convergence[i] = False
+        if centroids[i].distance(new_centroid) >= 0.001:
+            convergence = False
         centroids[i] = new_centroid
-
-
-def convergence_reached(convergence):
-    if False in convergence:
-        return False
-    else:
-        return True
+    return convergence
 
 
 def main():
@@ -94,7 +87,6 @@ def main():
 
     # Initialize the centroids, convergence and the clusters
     centroids = vectors[:k]
-    convergence = [False for i in range(k)]
     clusters = [[] for i in range(k)]
 
     for i in range(iter):
@@ -108,8 +100,7 @@ def main():
             clusters[j].append(vec)
 
         # Calculate new centroids from cluster and check convergence
-        update_centroid_and_convergence(clusters, centroids, convergence, k)
-        if convergence_reached(convergence):
+        if update_centroid_and_convergence(clusters, centroids, k):
             break
 
     # Print centroids to screen
