@@ -15,7 +15,8 @@ class Vector:
         return Vector(new_vector)
 
     def __repr__(self):
-        return str(["%.4f" % elem for elem in self.data])
+        helper = ["%.4f" % elem for elem in self.data]
+        return ','.join(map(str, helper))
 
     # Function to calculate the distance between vectors, assuming equal length
     def distance(self, other):
