@@ -2,13 +2,129 @@
 #include <stdlib.h>
 #include <math.h>
 
+void zero_clusters(double **clusters, int k, int vecdim)
+{
+    for (int i=0;i<k;i++)
+    {
+        clusters[i] = malloc(vecdim * sizeof(double));
+        for (int j=0;j<vecdim;j++)
+        {
+            clusters[i][j] = 0;
+        }
+    }
+}
+
+double euclidean_distance(double *vec1, double *vec2, int vecdim)
+{
+    double sum = 0;
+    for (int i=0;i<vecdim;i++)
+    {
+        sum += pow(vec1[i] - vec2[i], 2);
+    }
+    return sqrt(sum);
+}
+
+int find_closest_centroid(double *vec, double **centroids, int k, int vecdim)
+{
+    double min_dist = euclidean_distance(vec, centroids[0], vecdim);
+    int min_index = 0;
+    for (int i=1;i<k;i++)
+    {
+        double dist = euclidean_distance(vec, centroids[i], vecdim);
+        if (dist < min_dist)
+        {
+            min_dist = dist;
+            min_index = i;
+        }
+    }
+    return min_index;
+}
+
+void add_vec_to_cluster(double *vec, double *cluster, int vecdim)
+{
+    for (int i=0;i<vecdim;i++)
+    {
+        cluster[i] += vec[i];
+    }
+}
+
+void divide_cluster(double *cluster, int vecdim, int k)
+{
+    for (int i=0;i<vecdim;i++)
+    {
+        cluster[i] /= k;
+    }
+}
+
+void divide_all_clusters(double **clusters, int k, int vecdim, int *cluster_sizes)
+{
+    for (int i=0;i<k;i++)
+    {
+        divide_cluster(clusters[i], vecdim, cluster_sizes[i]);
+    }
+}
+
+int check_convergence(double **centroids, double **clusters, int k, int vecdim)
+{
+    int flag = 1;
+    for (int i=0;i<k;i++)
+    {
+        if (!(euclidean_distance(centroids[i], clusters[i], vecdim) < 0.0001))
+        {
+            flag = 0;
+            break;
+        }
+    }
+    return flag;
+}
+
+void copy_clusters_to_centroids(double **clusters, double **centroids, int k, int vecdim)
+{
+    for (int i=0;i<k;i++)
+    {
+        for (int j=0;j<vecdim;j++)
+        {
+            centroids[i][j] = clusters[i][j];
+        }
+    }
+    zero_clusters(clusters, k, vecdim);
+}
+
+// print a 2D array of doubles with only 4 digits after the point
+void print_vec_arr(double **vec_arr, int N, int vecdim)
+{
+    for (int i=0;i<N;i++)
+    {
+        for (int j=0;j<vecdim;j++)
+        {
+            printf("%.4f", vec_arr[i][j]);
+            if (j != vecdim-1)
+            {
+                printf(",");
+            }
+        }
+        printf("\n");
+    }
+}
+
+void zero_cluster_sizes(int *cluster_sizes, int k)
+{
+    for (int i=0;i<k;i++)
+    {
+        cluster_sizes[i] = 0;
+    }
+}
+
 int main(int argc, char* argv[])
 {
 
     // init k, and check if iter was given
     int k = atoi(argv[1]);
     int iter;
+    // N is the number of vectors
+    int N = 0;
 
+    // determine if iter was given and give default value 200 if not
     if (argc == 3)
     {
         iter = atoi(argv[2]);
@@ -17,9 +133,6 @@ int main(int argc, char* argv[])
     {
         iter = 200; // default value for iter if not given
     }
-
-    // delete later
-    printf("k = %d, iter = %d\n", k, iter);
     
     // ch will be our temporary character
     // vec dim will define the number of entries in each vector
@@ -40,9 +153,15 @@ int main(int argc, char* argv[])
 
     // first vector will be a dynamic array of doubles
     double *first_vec = malloc(sizeof(double));
+    if (first_vec == NULL)
+    {
+        printf("Failed to allocate memory");
+        return 1;
+    }
+
     char is_first = 1; // boolean to check if we are on the first vector
 
-    ch = getchar();
+    ch = getchar(); // get the first character
     
     // iterating over the first vector to find its dimension
     while (ch != '\n')
@@ -111,17 +230,27 @@ int main(int argc, char* argv[])
     
     vecdim++; // increment the number of entries in the vector
     curr_dbl_index = 0; // reset the index
+    
+    // increment N
+    N++;
 
     //-------------done with first vector----------------
 
     // init vector array of arrays
     double **vec_arr = malloc(sizeof(first_vec));
-    vec_arr[0] = first_vec;
+
+    if (vec_arr == NULL)
+    {
+        printf("Failed to allocate memory");
+        return 1;
+    }   
+
+    // Get all other vectors
     ch = getchar();
     
     while (ch != EOF) 
     {
-        double curr_vec[vecdim];
+        double *curr_vec = malloc(vecdim * sizeof(double));
         for (int i=0;i<vecdim;i++)
         {
             while (ch != ',' && ch != '\n')
@@ -138,7 +267,6 @@ int main(int argc, char* argv[])
                         printf("Failed to reallocate memory");
                         return 1;
                     }
-
                 }
                 // else, no need to reallocate memory
                 curr_dbl[curr_dbl_index] = ch;
@@ -159,15 +287,122 @@ int main(int argc, char* argv[])
             
             curr_dbl_index = 0; // reset the index
 
-            ch = getchar(); // move on to next character
+            ch = getchar(); // move on to next character  
         }
 
-        //print curr_vec
+        // increment N
+        N++;
+
+        // reallocate memory for one more vector
+        vec_arr = realloc(vec_arr, N*(sizeof(double*)));
+        if (vec_arr == NULL)
+        {
+            printf("Failed to reallocate memory");
+            return 1;
+        }
+
+        // allocate memory for the new vector
+        vec_arr[N-1] = malloc(vecdim * sizeof(double));
+        if (vec_arr[N-1] == NULL)
+        {
+            printf("Failed to allocate memory");
+            return 1;
+        }
+
+        // copy the current vector into the array of vectors
         for (int i=0;i<vecdim;i++)
         {
-            printf("%f\n", curr_vec[i]);
+            vec_arr[N-1][i] = curr_vec[i];
         }
-        break;
+        free(curr_vec); // free the current vector
     }
+
+    // copy the first vector into the array of vectors
+    vec_arr[0] = first_vec;
+    
+    // MATRIX OF VECTORS IS NOW STORED IN vec_arr
+    // -----------------------------------------------
+
+    // check if k, iter are legal
+    if (!(k > 1 && k < N))
+    {
+        printf("Invalid number of clusters!\n");
+        return 1;
+    }
+
+    if (!(iter > 1 && iter < 1000)) {
+        printf("Invalid maximum iteration!\n");
+        return 1;
+    }
+
+    // create cluster and centroid arrays
+    double **clusters = malloc(k * sizeof(double*));
+    if (clusters == NULL)
+    {
+        printf("Failed to allocate memory");
+        return 1;
+    }
+    double **centroids = malloc(k * sizeof(double*));
+    if (centroids == NULL)
+    {
+        printf("Failed to allocate memory");
+        return 1;
+    }
+
+    int *cluster_sizes = malloc(k * sizeof(int));
+    if (cluster_sizes == NULL)
+    {
+        printf("Failed to allocate memory");
+        return 1;
+    }
+
+    // zero out the cluster_sizes array
+    zero_cluster_sizes(cluster_sizes, k);
+
+    // insert first k vectors from vec_arr into centroids array
+    for (int i=0;i<k;i++)
+    {
+        centroids[i] = malloc(vecdim * sizeof(double));
+        for (int j=0;j<vecdim;j++)
+        {
+            centroids[i][j] = vec_arr[i][j];
+        }
+    }
+
+    // zero out the clusters array
+    zero_clusters(clusters, k, vecdim);
+
+    // start the k-means algorithm
+    for (int i=0;i<iter;i++)
+    {
+        // iterate over all vectors
+        for (int j=0;j<N;j++)
+        {
+
+            // find the closest centroid
+            int closest_centroid = find_closest_centroid(vec_arr[j], centroids, k, vecdim);
+            cluster_sizes[closest_centroid]++;
+
+            // add the vector to the closest cluster
+            add_vec_to_cluster(vec_arr[j], clusters[closest_centroid], vecdim);
+        }
+
+        // divide all clusters by the number of vectors in them
+        divide_all_clusters(clusters, k, vecdim, cluster_sizes);
+
+        // check for convergence
+        if (check_convergence(centroids, clusters, k, vecdim))
+        {
+            break;
+        }
+        else
+        {
+            copy_clusters_to_centroids(clusters, centroids, k, vecdim);
+            zero_cluster_sizes(cluster_sizes, k);
+        }
+    }
+
+    print_vec_arr(centroids, k, vecdim);
+
     return 0;
 }
