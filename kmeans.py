@@ -43,7 +43,7 @@ def assert_input(k, iter, N):
     if not 1 < k < N:
         print("Invalid number of clusters!")
         ok = False
-    if not 1 <= iter <= 1000:
+    if not 1 < iter < 1000:
         print("Invalid maximum iteration!")
         ok = False
     return ok
