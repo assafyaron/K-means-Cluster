@@ -7,7 +7,6 @@ void zero_clusters(double **clusters, int k, int vecdim)
     int i,j;
     for (i=0;i<k;i++)
     {
-        clusters[i] = malloc(vecdim * sizeof(double));
         for (j=0;j<vecdim;j++)
         {
             clusters[i][j] = 0;
@@ -126,6 +125,35 @@ void zero_cluster_sizes(int *cluster_sizes, int k)
     }
 }
 
+void matrix_free(double **p, int n)
+{
+    int i;
+    for(i=0;i<n;i++)
+    {
+        free(p[i]);
+    }
+    free(p); 
+}
+
+int isNaturalNumber(char *number)
+{
+    int i = 0;
+    int after_point = 0;
+    while(number[i]!='\0')
+    {
+        if ((number[i] != '0') && after_point)
+        {
+            return 0;
+        }
+        if (number[i] == '.')
+        {
+            after_point = 1;
+        }
+        i++;
+    }
+    return 1;
+}
+
 int main(int argc, char* argv[])
 {
     int i,j;
@@ -151,19 +179,33 @@ int main(int argc, char* argv[])
     /* make sure memory was allocated for curr_dbl and first_vec */
     if (first_vec == NULL)
     {
-        printf("Failed to allocate memory");
+        printf("An Error Has Occured");
+        free(curr_dbl);
+        free(first_vec);   
         return 1;
     }
     if (curr_dbl == NULL)
     {
-        printf("Failed to allocate memory");
+        printf("An Error Has Occured");
+        free(curr_dbl);
+        free(first_vec);
         return 1;
     }
 
     /* determine if iter was given and give default value 200 if not */
+    if(!isNaturalNumber(argv[1]))
+    {
+        printf("Invalid number of clusters!\n");
+        return 1;
+    }
     if (argc == 3)
     {
         iter = atoi(argv[2]);
+        if(!isNaturalNumber(argv[2]))
+        {
+            printf("Invalid number of iteration!\n");
+            return 1;
+        }
     }
     else
     {
@@ -187,6 +229,8 @@ int main(int argc, char* argv[])
             if (first_vec == NULL)
             {
                 printf("Failed to reallocate memory");
+                free(curr_dbl);
+                free(first_vec);
                 return 1;
             }
 
@@ -208,6 +252,8 @@ int main(int argc, char* argv[])
                 if (curr_dbl == NULL)
                 {
                     printf("Failed to reallocate memory");
+                    free(curr_dbl);
+                    free(first_vec);
                     return 1;
                 }
             }
@@ -231,6 +277,8 @@ int main(int argc, char* argv[])
     if (first_vec == NULL)
     {
         printf("Failed to reallocate memory");
+        free(curr_dbl);
+        free(first_vec);
         return 1;
     }
 
@@ -247,10 +295,12 @@ int main(int argc, char* argv[])
 
     /* init vector array of arrays */
     vec_arr = malloc(sizeof(first_vec));
-
     if (vec_arr == NULL)
     {
-        printf("Failed to allocate memory");
+        printf("An Error Has Occured");
+        matrix_free(vec_arr, N);
+        free(curr_dbl);
+        free(first_vec);
         return 1;
     }   
 
@@ -260,6 +310,16 @@ int main(int argc, char* argv[])
     while (ch != EOF) 
     {
         double *curr_vec = malloc(vecdim * sizeof(double));
+        if (curr_vec == NULL)
+        {
+            printf("Failed to reallocate memory");
+            matrix_free(vec_arr, N);
+            free(curr_dbl);
+            free(first_vec);
+            free(curr_vec);
+            return 1;
+        }
+
         for (i=0;i<vecdim;i++)
         {
             while (ch != ',' && ch != '\n')
@@ -274,6 +334,10 @@ int main(int argc, char* argv[])
                     if (curr_dbl == NULL)
                     {
                         printf("Failed to reallocate memory");
+                        matrix_free(vec_arr, N);
+                        free(curr_dbl);
+                        free(first_vec);
+                        free(curr_vec);
                         return 1;
                     }
                 }
@@ -307,6 +371,10 @@ int main(int argc, char* argv[])
         if (vec_arr == NULL)
         {
             printf("Failed to reallocate memory");
+            matrix_free(vec_arr, N);
+            free(curr_dbl);
+            free(first_vec);
+            free(curr_vec);
             return 1;
         }
 
@@ -314,7 +382,11 @@ int main(int argc, char* argv[])
         vec_arr[N-1] = malloc(vecdim * sizeof(double));
         if (vec_arr[N-1] == NULL)
         {
-            printf("Failed to allocate memory");
+            printf("An Error Has Occured");
+            matrix_free(vec_arr, N);
+            free(curr_dbl);
+            free(first_vec);
+            free(curr_vec);
             return 1;
         }
 
@@ -325,6 +397,9 @@ int main(int argc, char* argv[])
         }
         free(curr_vec); /* free the current vector */
     }
+
+    /* done with curr_dbl - free it*/
+    free(curr_dbl);
 
     /* copy the first vector into the array of vectors */
     vec_arr[0] = first_vec;
@@ -344,24 +419,34 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    /* create cluster and centroid arrays */
+    /* create clusters, centroids and cluster_sizes arrays */
     clusters = malloc(k * sizeof(double*));
     if (clusters == NULL)
     {
-        printf("Failed to allocate memory");
-        return 1;
-    }
-    centroids = malloc(k * sizeof(double*));
-    if (centroids == NULL)
-    {
-        printf("Failed to allocate memory");
+        printf("An Error Has Occured");
+        matrix_free(vec_arr, N);
+        matrix_free(clusters, k);
         return 1;
     }
 
+    centroids = malloc(k * sizeof(double*));
+    if (centroids == NULL)
+    {
+        printf("An Error Has Occured");
+        matrix_free(vec_arr, N);
+        matrix_free(clusters, k);
+        matrix_free(centroids, k);
+        return 1;
+    }
+    
     cluster_sizes = malloc(k * sizeof(int));
     if (cluster_sizes == NULL)
     {
-        printf("Failed to allocate memory");
+        printf("An Error Has Occured");
+        matrix_free(vec_arr, N);
+        matrix_free(clusters, k);
+        matrix_free(centroids, k);
+        free(cluster_sizes);
         return 1;
     }
 
@@ -372,14 +457,39 @@ int main(int argc, char* argv[])
     for (i=0;i<k;i++)
     {
         centroids[i] = malloc(vecdim * sizeof(double));
+        if (centroids[i] == NULL)
+        {
+            printf("An Error Has Occured");
+            matrix_free(vec_arr, N);
+            matrix_free(clusters, k);
+            matrix_free(centroids, k);
+            free(cluster_sizes);
+            return 1;
+        }
         for (j=0;j<vecdim;j++)
         {
             centroids[i][j] = vec_arr[i][j];
         }
     }
 
-    /* zero out the clusters array */
-    zero_clusters(clusters, k, vecdim);
+    /* initialize and zero out the clusters array */
+    for (i=0;i<k;i++)
+    {
+        clusters[i] = malloc(vecdim * sizeof(double));
+        if (clusters[i] == NULL)
+        {
+            printf("An Error Has Occured");
+            matrix_free(vec_arr, N);
+            matrix_free(clusters, k);
+            matrix_free(centroids, k);
+            free(cluster_sizes);
+            return 1;
+        }
+        for (j=0;j<vecdim;j++)
+        {
+            clusters[i][j] = 0;
+        }
+    }
 
     /* start the k-means algorithm */
     for (i=0;i<iter;i++)
@@ -412,6 +522,11 @@ int main(int argc, char* argv[])
     }
 
     print_vec_arr(centroids, k, vecdim);
+        
+    matrix_free(vec_arr, N);
+    matrix_free(clusters, k);
+    matrix_free(centroids, k);
+    free(cluster_sizes);
 
     return 0;
 }
