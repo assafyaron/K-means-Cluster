@@ -66,7 +66,10 @@ void divide_all_clusters(double **clusters, int k, int vecdim, int *cluster_size
     int i;
     for (i=0;i<k;i++)
     {
-        divide_cluster(clusters[i], vecdim, cluster_sizes[i]);
+        if (cluster_sizes[i])
+        {
+            divide_cluster(clusters[i], vecdim, cluster_sizes[i]);
+        }
     }
 }
 

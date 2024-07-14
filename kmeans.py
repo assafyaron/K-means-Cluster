@@ -62,13 +62,19 @@ def compute_centroid_from_cluster(cluster, k):
 def update_centroid_and_convergence(clusters, centroids, k):
     convergence = True
     for i in range(k):
-        new_centroid = compute_centroid_from_cluster(clusters[i], k)
+        if len(clusters[i]) != 0:
+            new_centroid = compute_centroid_from_cluster(clusters[i], k)
+        else:
+            new_centroid = Vector([float(0) for i in range(centroids[0].length)])
         if centroids[i].distance(new_centroid) >= 0.001:
             convergence = False
         centroids[i] = new_centroid
     return convergence
 
+
 my_file = None
+
+
 def main():
     try:
         # Get data from console
@@ -113,7 +119,7 @@ def main():
         print("\n".join(str(cent) for cent in centroids))
 
     except:
-        print("An Error Has Ocurred") 
+        print("An Error Has Ocurred")
     finally:
         my_file.close()
 
