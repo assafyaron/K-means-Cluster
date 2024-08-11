@@ -1,4 +1,4 @@
-Implementation of K Means Algorithm in Python and C.
+Implementation of K Means Algorithm in Python and C. Initial centroids will be the first k vectors in txt file.
 
 Input: k, iter, input.txt
 
